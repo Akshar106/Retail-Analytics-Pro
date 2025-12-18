@@ -1,0 +1,13 @@
+flask
+flask-cors
+pymongo
+pandas
+numpy
+scikit-learn
+python-dateutil
+pytz
+werkzeug
+jinja2
+gunicorn
+dnspython
+

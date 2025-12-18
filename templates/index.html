@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retail Analytics Pro Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title">
+        <span class="header-icon">🛍️</span>
+        <div>
+          <h1>Retail Analytics Pro</h1>
+          <p class="header-subtitle">Real-time Business Intelligence Dashboard</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" id="exportCsvBtn">
+          <span>📊</span> Export CSV
+        </button>
+        <button class="btn btn-outline" id="exportPdfBtn">
+          <span>📄</span> Export PDF
+        </button>
+        <button class="btn btn-primary" id="refreshBtn">
+          <span>🔄</span> Refresh All
+        </button>
+      </div>
+    </header>
+
+    <!-- Filters Panel -->
+    <section class="filters-panel">
+      <div class="panel-header">
+        <h2>📅 Filters & Date Range</h2>
+        <button class="btn-icon" id="toggleFilters">▼</button>
+      </div>
+      <div class="filters-content" id="filtersContent">
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label>Start Date</label>
+            <input type="date" id="startDate" class="input-field">
+          </div>
+          <div class="filter-group">
+            <label>End Date</label>
+            <input type="date" id="endDate" class="input-field">
+          </div>
+          <div class="filter-group">
+            <label>Country Filter</label>
+            <select id="countrySelect" multiple class="input-field" size="3"></select>
+          </div>
+          <div class="filter-group">
+            <label>Customer Segment</label>
+            <select id="segmentFilter" class="input-field">
+              <option value="">All Segments</option>
+              <option value="high">High Value</option>
+              <option value="medium">Medium Value</option>
+              <option value="low">Low Value</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="date-presets">
+          <span class="preset-label">Quick Select:</span>
+          <button class="preset-btn" data-preset="today">Today</button>
+          <button class="preset-btn" data-preset="yesterday">Yesterday</button>
+          <button class="preset-btn" data-preset="week">This Week</button>
+          <button class="preset-btn" data-preset="month">This Month</button>
+          <button class="preset-btn" data-preset="quarter">This Quarter</button>
+          <button class="preset-btn" data-preset="year">This Year</button>
+          <button class="preset-btn" data-preset="all">All Time</button>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="applyFiltersBtn">Apply Filters</button>
+          <button class="btn btn-outline" id="clearFiltersBtn">Clear All</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading data...</p>
+    </div>
+
+    <!-- KPI Dashboard -->
+    <section class="kpi-section">
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card" id="kpiRevenue">
+          <div class="kpi-header">
+            <div class="kpi-icon revenue">💰</div>
+            <div class="kpi-trend" id="revenueTrend"></div>
+          </div>
+          <div class="kpi-content">
+            <h3 class="kpi-title">Total Revenue</h3>
+            <p class="kpi-value" id="totalRevenue">$0.00</p>
+            <p class="kpi-subtitle">Across all transactions</p>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpiOrders">
+          <div class="kpi-header">
+            <div class="kpi-icon orders">📦</div>
+            <div class="kpi-trend" id="ordersTrend"></div>
+          </div>
+          <div class="kpi-content">
+            <h3 class="kpi-title">Total Orders</h3>
+            <p class="kpi-value" id="totalOrders">0</p>
+            <p class="kpi-subtitle">Completed transactions</p>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpiCustomers">
+          <div class="kpi-header">
+            <div class="kpi-icon customers">👥</div>
+            <div class="kpi-trend" id="customersTrend"></div>
+          </div>
+          <div class="kpi-content">
+            <h3 class="kpi-title">Unique Customers</h3>
+            <p class="kpi-value" id="uniqueCustomers">0</p>
+            <p class="kpi-subtitle">Active customer base</p>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpiAvgOrder">
+          <div class="kpi-header">
+            <div class="kpi-icon avg-order">🎯</div>
+            <div class="kpi-trend" id="avgOrderTrend"></div>
+          </div>
+          <div class="kpi-content">
+            <h3 class="kpi-title">Avg Order Value</h3>
+            <p class="kpi-value" id="avgOrderValue">$0.00</p>
+            <p class="kpi-subtitle">Per transaction</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="overview">
+        <span>📊</span> Overview
+      </button>
+      <button class="tab-btn" data-tab="products">
+        <span>🏷️</span> Products
+      </button>
+      <button class="tab-btn" data-tab="customers">
+        <span>👤</span> Customers & RFM
+      </button>
+      <button class="tab-btn" data-tab="analytics">
+        <span>📈</span> Advanced Analytics
+      </button>
+      <button class="tab-btn" data-tab="transactions">
+        <span>💳</span> Transactions
+      </button>
+    </nav>
+
+    <!-- Tab: Overview -->
+    <section id="overview" class="tab-content active">
+      <div class="chart-grid">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Revenue by Country</h3>
+            <div class="chart-actions">
+              <button class="btn-icon" onclick="toggleChartType('revByCountry')">📊</button>
+              <button class="btn-icon" onclick="downloadChart('revByCountry')">⬇️</button>
+            </div>
+          </div>
+          <div id="revByCountry" class="chart"></div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Top 10 Products</h3>
+            <div class="chart-actions">
+              <button class="btn-icon" onclick="toggleChartType('topProducts')">📊</button>
+              <button class="btn-icon" onclick="downloadChart('topProducts')">⬇️</button>
+            </div>
+          </div>
+          <div id="topProducts" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="chart-container full-width">
+        <div class="chart-header">
+          <h3 class="chart-title">Monthly Revenue Trend</h3>
+          <div class="chart-actions">
+            <button class="btn-icon" onclick="downloadChart('monthlyTrend')">⬇️</button>
+          </div>
+        </div>
+        <div id="monthlyTrend" class="chart"></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Daily Sales Pattern</h3>
+          </div>
+          <div id="dailyPattern" class="chart"></div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Product Category Distribution</h3>
+          </div>
+          <div id="categoryDist" class="chart"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Products -->
+    <section id="products" class="tab-content">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>Product Performance Analysis</h3>
+          <div class="table-controls">
+            <input type="text" id="productSearch" class="search-box" placeholder="🔍 Search by code or description...">
+            <select id="sortProducts" class="input-field">
+              <option value="revenue">Sort by Revenue</option>
+              <option value="quantity">Sort by Quantity</option>
+              <option value="code">Sort by Code</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="productTable">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Stock Code</th>
+                <th>Description</th>
+                <th>Quantity Sold</th>
+                <th>Revenue</th>
+                <th>Avg Price</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Customers & RFM -->
+    <section id="customers" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>🎯 RFM Customer Segmentation</h3>
+          <div class="rfm-controls">
+            <label>Clusters: 
+              <input type="number" id="rfmClusters" min="2" max="8" value="4" class="input-field-small">
+            </label>
+            <button class="btn btn-primary" id="computeRfmBtn">Run Analysis</button>
+          </div>
+        </div>
+        <div id="rfmCharts" class="chart-grid"></div>
+        <div id="rfmTableContainer" class="table-container"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Advanced Analytics -->
+    <section id="analytics" class="tab-content">
+      <div class="chart-grid">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Customer Lifetime Value Distribution</h3>
+          </div>
+          <div id="clvChart" class="chart"></div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Purchase Frequency Analysis</h3>
+          </div>
+          <div id="frequencyChart" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="chart-container full-width">
+        <div class="chart-header">
+          <h3 class="chart-title">Cohort Analysis - Monthly Retention</h3>
+        </div>
+        <div id="cohortChart" class="chart"></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Sales Forecast (Next 3 Months)</h3>
+          </div>
+          <div id="forecastChart" class="chart"></div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Top Product Associations</h3>
+          </div>
+          <div id="associationChart" class="chart"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Transactions -->
+    <section id="transactions" class="tab-content">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>Transaction Management (CRUD)</h3>
+          <button class="btn btn-primary" id="addTransactionBtn">+ Add Transaction</button>
+        </div>
+        <div class="table-scroll">
+          <table id="transactionTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Invoice</th>
+                <th>Date</th>
+                <th>Stock Code</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Customer ID</th>
+                <th>Country</th>
+                <th>Revenue</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal for Add/Edit Transaction -->
+  <div id="transactionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add New Transaction</h3>
+        <button class="close-btn">&times;</button>
+      </div>
+      <form id="transactionForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Invoice Number *</label>
+            <input type="text" id="formInvoice" required class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Stock Code *</label>
+            <input type="text" id="formStockCode" required class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <input type="text" id="formDescription" required class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Quantity *</label>
+            <input type="number" id="formQuantity" required min="1" value="1" class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Price *</label>
+            <input type="number" id="formPrice" required step="0.01" min="0" value="0.00" class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Customer ID</label>
+            <input type="text" id="formCustomerID" class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Country</label>
+            <input type="text" id="formCountry" class="input-field">
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="datetime-local" id="formInvoiceDate" class="input-field">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Transaction</button>
+          <button type="button" class="btn btn-outline" id="cancelFormBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
